@@ -1,9 +1,5 @@
 import { ShortUrl } from "@/types"
-
-// In-memory store using a Map
-// Note: This will reset when the server restarts
-// Will be replaced with Supabase in the future
-const urlStore = new Map<string, ShortUrl>()
+import { supabase } from "./supabase"
 
 // Generate a random short code
 function generateShortCode(length: number = 6): string {
@@ -15,40 +11,101 @@ function generateShortCode(length: number = 6): string {
   return result
 }
 
-// Generate a unique ID
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
-}
-
-export function createShortUrl(originalUrl: string): ShortUrl {
+export async function createShortUrl(originalUrl: string): Promise<ShortUrl> {
   const shortCode = generateShortCode()
-  const id = generateId()
 
-  const shortUrl: ShortUrl = {
-    id,
-    originalUrl,
-    shortCode,
-    clicks: 0,
-    createdAt: new Date(),
+  const { data, error } = await supabase
+    .from("shortened_urls")
+    .insert({
+      original_url: originalUrl,
+      short_code: shortCode,
+      clicks: 0,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error("Error creating short URL:", error)
+    throw new Error("Failed to create short URL")
   }
 
-  urlStore.set(shortCode, shortUrl)
-  return shortUrl
-}
-
-export function getShortUrl(shortCode: string): ShortUrl | undefined {
-  return urlStore.get(shortCode)
-}
-
-export function incrementClicks(shortCode: string): ShortUrl | undefined {
-  const url = urlStore.get(shortCode)
-  if (url) {
-    url.clicks += 1
-    urlStore.set(shortCode, url)
+  return {
+    id: data.id,
+    originalUrl: data.original_url,
+    shortCode: data.short_code,
+    clicks: data.clicks,
+    createdAt: new Date(data.created_at),
   }
-  return url
 }
 
-export function getAllUrls(): ShortUrl[] {
-  return Array.from(urlStore.values())
+export async function getShortUrl(shortCode: string): Promise<ShortUrl | null> {
+  const { data, error } = await supabase
+    .from("shortened_urls")
+    .select("*")
+    .eq("short_code", shortCode)
+    .single()
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      // PGRST116 = no rows returned
+      return null
+    }
+    console.error("Error fetching short URL:", error)
+    throw new Error("Failed to fetch short URL")
+  }
+
+  return {
+    id: data.id,
+    originalUrl: data.original_url,
+    shortCode: data.short_code,
+    clicks: data.clicks,
+    createdAt: new Date(data.created_at),
+  }
+}
+
+export async function incrementClicks(shortCode: string): Promise<ShortUrl | null> {
+  // First get the current URL
+  const url = await getShortUrl(shortCode)
+  if (!url) return null
+
+  // Increment the click count
+  const { data, error } = await supabase
+    .from("shortened_urls")
+    .update({ clicks: url.clicks + 1 })
+    .eq("short_code", shortCode)
+    .select()
+    .single()
+
+  if (error) {
+    console.error("Error incrementing clicks:", error)
+    throw new Error("Failed to increment clicks")
+  }
+
+  return {
+    id: data.id,
+    originalUrl: data.original_url,
+    shortCode: data.short_code,
+    clicks: data.clicks,
+    createdAt: new Date(data.created_at),
+  }
+}
+
+export async function getAllUrls(): Promise<ShortUrl[]> {
+  const { data, error } = await supabase
+    .from("shortened_urls")
+    .select("*")
+    .order("created_at", { ascending: false })
+
+  if (error) {
+    console.error("Error fetching all URLs:", error)
+    throw new Error("Failed to fetch URLs")
+  }
+
+  return data.map((url) => ({
+    id: url.id,
+    originalUrl: url.original_url,
+    shortCode: url.short_code,
+    clicks: url.clicks,
+    createdAt: new Date(url.created_at),
+  }))
 }

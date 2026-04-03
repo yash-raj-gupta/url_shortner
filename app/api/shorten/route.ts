@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const shortUrl = createShortUrl(originalUrl)
+    const shortUrl = await createShortUrl(originalUrl)
 
     const baseUrl = request.nextUrl.origin
     const shortUrlStr = `${baseUrl}/${shortUrl.shortCode}`

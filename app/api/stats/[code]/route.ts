@@ -15,7 +15,7 @@ export async function GET(
       )
     }
 
-    const shortUrl = getShortUrl(code)
+    const shortUrl = await getShortUrl(code)
 
     if (!shortUrl) {
       return NextResponse.json(
@@ -28,7 +28,7 @@ export async function GET(
       originalUrl: shortUrl.originalUrl,
       shortCode: shortUrl.shortCode,
       clicks: shortUrl.clicks,
-      createdAt: shortUrl.createdAt.toISOString(),
+      createdAt: shortUrl.createdAt?.toISOString() || new Date().toISOString(),
     })
   } catch (error) {
     console.error("Error fetching stats:", error)

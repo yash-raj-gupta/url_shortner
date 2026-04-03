@@ -1,6 +1,6 @@
-# URL Shortener MVP
+# URL Shortener
 
-A simple URL shortener built with Next.js that allows users to shorten long URLs and track click statistics.
+A URL shortener built with Next.js and Supabase that allows users to shorten long URLs and track click statistics.
 
 ## Features
 
@@ -9,12 +9,14 @@ A simple URL shortener built with Next.js that allows users to shorten long URLs
 - **Click Tracking** - Track how many times each short URL has been accessed
 - **Stats Dashboard** - View click count and creation date for each shortened URL
 - **Copy to Clipboard** - One-click copy of shortened URLs
+- **Persistent Storage** - URLs stored in Supabase (works on Vercel)
 
 ## Tech Stack
 
 - **Next.js 16** (App Router)
 - **TypeScript**
 - **Tailwind CSS**
+- **Supabase** (database)
 - **Lucide React** (icons)
 
 ## Project Structure
@@ -37,24 +39,65 @@ url_shortner/
 │   ├── layout.tsx            # Root layout
 │   └── page.tsx              # Home page with form
 ├── lib/
-│   ├── store.ts              # In-memory URL store
+│   ├── store.ts              # Supabase URL operations
+│   ├── supabase.ts           # Supabase client
 │   └── utils.ts              # Utility functions
+├── supabase/
+│   └── schema.sql            # Database schema
 ├── types/
 │   └── index.ts              # TypeScript interfaces
+├── .env.example              # Environment variables template
 ├── package.json
 └── tsconfig.json
 ```
 
+## Setup
+
+### 1. Create Supabase Project
+
+1. Go to [supabase.com](https://supabase.com) and sign in
+2. Click "New Project"
+3. Fill in the details:
+   - **Name**: url-shortener
+   - **Database Password**: Choose a strong password
+   - **Region**: Pick one closest to you
+4. Click "Create new project" and wait for it to set up
+
+### 2. Set Up Database
+
+1. Go to **SQL Editor** in your Supabase dashboard
+2. Copy the contents of [supabase/schema.sql](supabase/schema.sql)
+3. Click "Run" to execute the SQL
+
+### 3. Configure Environment Variables
+
+1. Go to **Project Settings** → **API**
+2. Copy your **Project URL** and **anon public** key
+3. Update `.env.local` with your credentials:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url_here
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+```
+
+### 4. Deploy to Vercel
+
+1. Push your code to GitHub
+2. Go to [Vercel](https://vercel.com) and import the project
+3. In the Vercel project settings, add the environment variables:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+4. Deploy!
+
 ## Data Model
 
-```typescript
-interface ShortUrl {
-  id: string
-  originalUrl: string
-  shortCode: string
-  clicks: number
-  createdAt: Date
-}
+```sql
+shortened_urls table:
+- id: UUID (primary key)
+- original_url: TEXT
+- short_code: VARCHAR(20) - unique
+- clicks: INTEGER - default 0
+- created_at: TIMESTAMP WITH TIME ZONE
 ```
 
 ## API Endpoints
@@ -73,7 +116,7 @@ Create a new short URL.
 ```json
 {
   "shortCode": "abc123",
-  "shortUrl": "http://localhost:3000/abc123"
+  "shortUrl": "https://yourdomain.com/abc123"
 }
 ```
 
@@ -107,7 +150,7 @@ Redirect to the original URL and increment click count.
 - Creation date
 - Short URL with copy functionality
 
-## Usage
+## Usage (Local Development)
 
 1. **Start the development server:**
    ```bash
@@ -131,25 +174,12 @@ Redirect to the original URL and increment click count.
    - Click the chart icon on the result
    - Or navigate to /stats/[code]
 
-## Limitations (MVP)
-
-- **In-memory storage** - URLs are stored in memory and will be lost when the server restarts
-- **No authentication** - Anyone can create and view URLs
-- **No custom short codes** - Short codes are randomly generated
-- **No deletion** - URLs cannot be deleted once created
-
 ## Future Enhancements
 
-- [ ] Integrate Supabase for persistent storage
+- [x] Integrate Supabase for persistent storage
 - [ ] Add third-party authentication (OAuth)
 - [ ] Allow custom short codes
 - [ ] Add QR code generation
 - [ ] Add URL expiration
 - [ ] Add analytics dashboard
 - [ ] Add URL deletion
-
-## Environment Variables
-
-No environment variables required for the MVP. Future versions may require:
-- `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key

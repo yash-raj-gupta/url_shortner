@@ -15,7 +15,7 @@ export async function GET(
       )
     }
 
-    const shortUrl = getShortUrl(code)
+    const shortUrl = await getShortUrl(code)
 
     if (!shortUrl) {
       return NextResponse.json(
@@ -25,7 +25,7 @@ export async function GET(
     }
 
     // Increment click count
-    incrementClicks(code)
+    await incrementClicks(code)
 
     // Redirect to the original URL
     return NextResponse.redirect(shortUrl.originalUrl)

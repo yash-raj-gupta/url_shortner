@@ -3,7 +3,7 @@ export interface ShortUrl {
   originalUrl: string
   shortCode: string
   clicks: number
-  createdAt: Date
+  createdAt?: Date
 }
 
 export interface ShortenRequest {
