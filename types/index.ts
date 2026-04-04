@@ -3,6 +3,7 @@ export interface ShortUrl {
   originalUrl: string
   shortCode: string
   clicks: number
+  userId?: string | null
   createdAt?: Date
 }
 

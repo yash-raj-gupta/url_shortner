@@ -11,7 +11,7 @@ function generateShortCode(length: number = 6): string {
   return result
 }
 
-export async function createShortUrl(originalUrl: string): Promise<ShortUrl> {
+export async function createShortUrl(originalUrl: string, userId?: string): Promise<ShortUrl> {
   const shortCode = generateShortCode()
 
   const { data, error } = await supabase
@@ -20,6 +20,7 @@ export async function createShortUrl(originalUrl: string): Promise<ShortUrl> {
       original_url: originalUrl,
       short_code: shortCode,
       clicks: 0,
+      user_id: userId || null,
     })
     .select()
     .single()
@@ -34,6 +35,7 @@ export async function createShortUrl(originalUrl: string): Promise<ShortUrl> {
     originalUrl: data.original_url,
     shortCode: data.short_code,
     clicks: data.clicks,
+    userId: data.user_id,
     createdAt: new Date(data.created_at),
   }
 }
@@ -59,6 +61,7 @@ export async function getShortUrl(shortCode: string): Promise<ShortUrl | null> {
     originalUrl: data.original_url,
     shortCode: data.short_code,
     clicks: data.clicks,
+    userId: data.user_id,
     createdAt: new Date(data.created_at),
   }
 }
@@ -86,7 +89,43 @@ export async function incrementClicks(shortCode: string): Promise<ShortUrl | nul
     originalUrl: data.original_url,
     shortCode: data.short_code,
     clicks: data.clicks,
+    userId: data.user_id,
     createdAt: new Date(data.created_at),
+  }
+}
+
+export async function getUrlsByUser(userId: string): Promise<ShortUrl[]> {
+  const { data, error } = await supabase
+    .from("shortened_urls")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+
+  if (error) {
+    console.error("Error fetching user URLs:", error)
+    throw new Error("Failed to fetch URLs")
+  }
+
+  return data.map((url) => ({
+    id: url.id,
+    originalUrl: url.original_url,
+    shortCode: url.short_code,
+    clicks: url.clicks,
+    userId: url.user_id,
+    createdAt: new Date(url.created_at),
+  }))
+}
+
+export async function deleteUrl(id: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from("shortened_urls")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId)
+
+  if (error) {
+    console.error("Error deleting URL:", error)
+    throw new Error("Failed to delete URL")
   }
 }
 
@@ -106,6 +145,7 @@ export async function getAllUrls(): Promise<ShortUrl[]> {
     originalUrl: url.original_url,
     shortCode: url.short_code,
     clicks: url.clicks,
+    userId: url.user_id,
     createdAt: new Date(url.created_at),
   }))
 }

@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import { Link2, Copy, Check, ExternalLink, BarChart3 } from "lucide-react"
+import { AuthButton } from "@/components/auth-button"
+import { useAuth } from "@/lib/auth-context"
 
 interface ShortenResult {
   shortCode: string
@@ -9,6 +11,7 @@ interface ShortenResult {
 }
 
 export default function Home() {
+  const { user } = useAuth()
   const [originalUrl, setOriginalUrl] = useState("")
   const [result, setResult] = useState<ShortenResult | null>(null)
   const [error, setError] = useState("")
@@ -27,7 +30,10 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ originalUrl }),
+        body: JSON.stringify({
+          originalUrl,
+          userId: user?.id,
+        }),
       })
 
       const data = await response.json()
@@ -55,6 +61,12 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-zinc-100 dark:from-black dark:to-zinc-900">
+      <header className="absolute top-0 left-0 right-0 p-6">
+        <div className="max-w-2xl mx-auto flex justify-end">
+          <AuthButton />
+        </div>
+      </header>
+
       <div className="mx-auto max-w-2xl px-6 py-24">
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-zinc-900 dark:bg-white rounded-2xl mb-6">
@@ -99,6 +111,12 @@ export default function Home() {
 
           {error && (
             <p className="mt-3 text-sm text-red-600 dark:text-red-400">{error}</p>
+          )}
+
+          {user && (
+            <p className="mt-3 text-xs text-green-600 dark:text-green-400">
+              Logged in as {user.email} - Your URLs will be saved to your history
+            </p>
           )}
         </form>
 

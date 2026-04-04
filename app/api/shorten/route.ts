@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createShortUrl, getShortUrl } from "@/lib/store"
+import { createShortUrl } from "@/lib/store"
 import { isValidUrl } from "@/lib/utils"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { originalUrl } = body
+    const { originalUrl, userId } = body
 
     if (!originalUrl) {
       return NextResponse.json(
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const shortUrl = await createShortUrl(originalUrl)
+    const shortUrl = await createShortUrl(originalUrl, userId)
 
     const baseUrl = request.nextUrl.origin
     const shortUrlStr = `${baseUrl}/${shortUrl.shortCode}`

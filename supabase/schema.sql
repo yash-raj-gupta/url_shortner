@@ -1,34 +1,54 @@
--- URL Shortener Database Schema for Supabase
+-- URL Shortener Database Schema Update for Supabase
+-- Run this in Supabase SQL Editor
 
--- Create the shortened_urls table
-CREATE TABLE IF NOT EXISTS shortened_urls (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  original_url TEXT NOT NULL,
-  short_code VARCHAR(20) UNIQUE NOT NULL,
-  clicks INTEGER DEFAULT 0,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- 1. Add user_id column to existing table
+ALTER TABLE shortened_urls ADD COLUMN user_id UUID REFERENCES auth.users(id);
 
--- Create an index on short_code for fast lookups
-CREATE INDEX IF NOT EXISTS idx_short_code ON shortened_urls(short_code);
+-- 2. Create index for user lookups
+CREATE INDEX idx_user_id ON shortened_urls(user_id);
 
--- Enable Row Level Security (RLS)
+-- 3. Enable RLS if not already enabled
 ALTER TABLE shortened_urls ENABLE ROW LEVEL SECURITY;
 
--- Allow public read access to all shortened URLs
+-- 4. Drop existing policies (if any)
+DROP POLICY IF EXISTS "Public URLs are viewable by everyone" ON shortened_urls;
+DROP POLICY IF EXISTS "Anyone can create shortened URLs" ON shortened_urls;
+DROP POLICY IF EXISTS "Anyone can update shortened URLs" ON shortened_urls;
+
+-- 5. Create new RLS policies
+
+-- Allow public read access (for redirects)
 CREATE POLICY "Public URLs are viewable by everyone"
 ON shortened_urls FOR SELECT
 TO public
 USING (true);
 
--- Allow public insert access
-CREATE POLICY "Anyone can create shortened URLs"
+-- Allow authenticated users to insert their own URLs
+CREATE POLICY "Users can create URLs"
 ON shortened_urls FOR INSERT
-TO public
-WITH CHECK (true);
+TO authenticated
+WITH CHECK (user_id = auth.uid());
 
--- Allow public update access (for incrementing clicks)
-CREATE POLICY "Anyone can update shortened URLs"
+-- Allow anonymous users to create URLs (user_id will be NULL)
+CREATE POLICY "Anonymous can create URLs"
+ON shortened_urls FOR INSERT
+TO anon
+WITH CHECK (user_id IS NULL);
+
+-- Allow authenticated users to update their own URLs
+CREATE POLICY "Users can update their URLs"
 ON shortened_urls FOR UPDATE
-TO public
-USING (true);
+TO authenticated
+USING (user_id = auth.uid());
+
+-- Allow anonymous updates for click tracking (on URLs with no user_id)
+CREATE POLICY "Anonymous can update for clicks"
+ON shortened_urls FOR UPDATE
+TO anon
+USING (user_id IS NULL);
+
+-- Allow authenticated users to delete their own URLs
+CREATE POLICY "Users can delete their URLs"
+ON shortened_urls FOR DELETE
+TO authenticated
+USING (user_id = auth.uid());
